@@ -1,51 +1,157 @@
-### Honours project data analysis ###
+### Consolidation project analysis ###
+# last updated by Anne Mickan, April 2nd, 2019
+
+# load required pacakges
 require(reshape)
 require(data.table)
 require(here)
+require(tidyr)
+require(plyr)
+require(ggplot2)
+require(lme4)
+require(lmerTest)
+require(lmtest)
 
-A = c(701:716, 726:741)
+# initiate participants
+A = c(701:722, 724:749, 751)
 
-### Read in all data and merge into one data file for Cami and Panthea
+# Transfer hand-coded RTs from Praat output to English posttest and pretest files
 data_list <- list()
 
 for (i in 1:length(A)){
   pNumber = A[i]
-  wd1 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/", pNumber, "_Finaltest", sep="")
-  wd2 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/",pNumber, "_Posttest_b", sep="")
-  wd3 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/",pNumber, "_Pre-test", sep="")
-  infile1 <- paste(pNumber,"Finaltest.txt",sep="_")
-  infile2 <- paste(pNumber,"Posttest_B.txt",sep="_")
-  infile3 <- paste(pNumber,"Pretest.txt",sep="_")
+  setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
+  infile1 <- paste(pNumber,"Engfinal_logfile_manual.txt",sep="_")
+  infile3 <- paste(pNumber,"Pretest_logfile_manual.txt",sep="_")
+  pretest <- as.data.frame(read.delim("PretestArticles.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+  posttest <- as.data.frame(read.delim("FinaltestArticles.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
   
-  setwd(wd2)
+  data <- read.delim(infile1, header = F)
+  data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
+  data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
+  as.numeric(data$rand2)->data$rand2
+  data <- data[order(data$rand2),]
+  
+  if (length(data$V1) > 46) {
+    print(pNumber)
+  }
+  
+  wd1 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest/", pNumber, "_Finaltest", sep="")
+  setwd(wd1)
+  infile2 <- paste(pNumber,"Finaltest.txt",sep="_")
   currentFile <- as.data.frame(read.delim(infile2, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+  
+  for (j in 1:nrow(currentFile)) {
+    pos <- which(tolower(as.character(data$rand2)) == tolower(as.character(currentFile$Trial_nr[j])))
+    currentFile$RT_new[j] <- data$V5[pos]
+  }
+  
+  for (j in 1:nrow(currentFile)) {
+    if(currentFile$RT_new[j]==0){
+      currentFile$RT_new[j] <- NA
+    }
+  }
+  
+  currentFile$ArticlesPost <- NA
+  if (any(posttest$Participant %in% currentFile$Subject_nr[1]) == T){
+    for (m in 1:nrow(posttest[posttest$Participant==currentFile$Subject_nr[1],])){
+      num <- which(tolower(as.character(currentFile$Trial_nr)) == tolower(as.character(posttest$Trial[m])))
+      currentFile$ArticlesPost[num] <- 1
+    }}
+  
+  setwd(wd1)
+  write.table(currentFile, infile2, quote = F, row.names = F, col.names = T, sep = "\t")
+  
+  setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
+  data <- read.delim(infile3, header = F)
+  data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
+  data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
+  as.numeric(data$rand2)->data$rand2
+  data <- data[order(data$rand2),]
+  
+  if (length(data$V1) > 46) {
+    print(pNumber)
+  }
+  
+  wd3 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Pretest/", pNumber, "_Pretest_subset", sep="")
+  setwd(wd3)
+  infile4 <- paste(pNumber,"Pretest.txt",sep="_")
+  currentFile2 <- as.data.frame(read.delim(infile4, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+  
+  for (j in 1:nrow(data)) {
+    pos <- which(tolower(as.character(currentFile2$Trial_nr)) == tolower(as.character(data$rand2[j])))
+    currentFile2$RT_new[pos] <- data$V5[j]
+  }
+  
+  for (j in 1:nrow(currentFile2)) {
+    if(is.na(currentFile2$RT_new[j])==0 && currentFile2$RT_new[j] == 0){
+      currentFile2$RT_new[j] <- NA
+    }
+  }
+  
+  # adding a column to the pretest that codes for article trials
+  currentFile2$ArticlesPre <- NA
+  if (any(pretest$Participant %in% currentFile2$Subject_nr[1]) == T){
+    for (f in 1:nrow(pretest[pretest$Participant==currentFile2$Subject_nr[1],])){
+      num <- which(tolower(as.character(currentFile2$Trial_nr)) == tolower(as.character(pretest$Trial[f])))
+      currentFile2$ArticlesPre[num] <- 1
+    }}
+  
+  
+  setwd(wd3)
+  write.table(currentFile2, infile4, quote = F, row.names = F, col.names = T, sep = "\t")
+}
+
+### Read in all data and merge into one data file that can be read in at later stages 
+data_list <- list()
+
+for (i in 1:length(A)){
+  pNumber = A[i]
+  wd1 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest/", pNumber, "_Finaltest", sep="")
+  wd2 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/Spanish_Posttest_a/",pNumber, "_Posttest_a", sep="")
+  wd3 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Pretest/",pNumber, "_Pretest_subset", sep="")
+  wd4 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/Spanish_Posttest_b/",pNumber, "_Posttest_b", sep="")
+  infile1 <- paste(pNumber,"Finaltest.txt",sep="_")
+  infile2 <- paste(pNumber,"Posttest_A.txt",sep="_")
+  infile3 <- paste(pNumber,"Pretest.txt",sep="_")
+  infile4 <- paste(pNumber,"Posttest_B.txt",sep="_")
+  
+  # read in Spanish postest file (only the second one for now)
+  setwd(wd4)
+  currentFile <- as.data.frame(read.delim(infile4, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+  # set all partially correct answers to complete errors
   if (length(currentFile[currentFile$Error == 999,]$Error) > 0){
     currentFile[currentFile$Error == 999,]$Error<-1
   }
   
+  # read in the English final test file 
   setwd(wd1)
   currentFile2 <- as.data.frame(read.delim(infile1, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+  # read in the English pretest file 
   setwd(wd3)
   currentFile3 <- as.data.frame(read.delim(infile3, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
-  ## adding pretest RTs
-  for (j in 1:nrow(currentFile)) {
-    pos <- which(tolower(as.character(currentFile3$English_Label )) == tolower(as.character(currentFile2$Item[j])))
+  
+  ## adding pretest RTs to final test file
+  for (j in 1:nrow(currentFile2)) {
+    pos <- which(tolower(as.character(currentFile3$English_Label)) == tolower(as.character(currentFile2$Item[j])))
     if (length(pos)==0) {} 
     else {
-      currentFile2$RT_pre[j] <- currentFile3$VoiceOnset[pos]
+      currentFile2$RT_pre[j] <- currentFile3$RT_new[pos]
+      currentFile2$ArticlesPre[j] <- currentFile3$ArticlesPre[pos]
     }}
   
-  ## marking unlearned words as missing values in posttest ##
+  ## marking unlearned words (from Spanish posttest) as missing values in final test 
   for (j in 1:nrow(currentFile)) {
-    pos <- which(tolower(as.character(currentFile2$Item )) == tolower(as.character(currentFile$Item[j])))
+    pos <- which(tolower(as.character(currentFile2$Item)) == tolower(as.character(currentFile$Item[j])))
     if (currentFile$Error[j] == 1) {
       currentFile2$Error[pos] <- NA
-      #currentFile2$ErrorDetail[pos] <- NA
+      currentFile2$ErrorDetail[pos] <- NA
       currentFile2$VoiceOnset[pos] <- NA
-      #currentFile2$RT_new[pos] <- NA
+      currentFile2$RT_new[pos] <- NA
       currentFile2$RT_pre[pos] <- NA
     }}
   
+  # set trials with errors to NA for naming latencies 
   if (length(currentFile2[ifelse(is.na(currentFile2$Error),
                                  1,currentFile2$Error) == 999,]$Error) > 0) {
     currentFile2[ifelse(is.na(currentFile2$Error),
@@ -58,11 +164,11 @@ for (i in 1:length(A)){
                         1,currentFile2$Error) == 1,]$VoiceOnset <- NA # this excludes words that were produced with errors after interference from RT analysis
   }
   
-  #if (length(currentFile2[ifelse(is.na(currentFile2$Error),
-  #                               1,currentFile2$Error) == 1,]$RT_new) > 0) {
-  #  currentFile2[ifelse(is.na(currentFile2$Error),
-  #                      1,currentFile2$Error) == 1,]$RT_new <- NA # this excludes words that were produced with errors after interference from RT analysis
-  #}
+  if (length(currentFile2[ifelse(is.na(currentFile2$Error),
+                                 1,currentFile2$Error) == 1,]$RT_new) > 0) {
+    currentFile2[ifelse(is.na(currentFile2$Error),
+                        1,currentFile2$Error) == 1,]$RT_new <- NA # this excludes words that were produced with errors after interference from RT analysis
+  }
   
   data_list[[i]] <- currentFile2
   
@@ -80,12 +186,6 @@ for (i in 1:nrow(post)){
   }
 }
 
-# setting variables
-post$Subject_nr <- as.factor(post$Subject_nr)
-post$Condition <- as.factor(post$Condition)
-post$Errorfact <- as.factor(post$Error)
-post$ConsolidationGroup <- as.factor(post$ConsolidationGroup)
-
 # checking RTs
 min(post$RT_new, na.rm=T)
 hist(post$RT_new)
@@ -93,18 +193,50 @@ shapiro.test(post$RT_new) ## data are not normal
 # log-transform RTs
 post$RT_new_log <- log(post$RT_new)
 
-# checking coding instances with error code "6"
-subset <- post[is.na(post$ErrorDetail)==0 && post$ErrorDetail == 6,] # only one case
-
-# new corrected for reaction time
+# difference scores for reaction times
 post$RTdiff <- post$RT_pre - post$RT_new
 post$Prelog <- log(post$RT_pre)
 post$RTdifflog <- post$Prelog - post$RT_new_log
 
+### deleting trials of words that were already known in Spanish before the learning phase
+setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
+known <- read.delim("KnownWords.txt")
+for (i in 1:nrow(known)){
+  pNumber <- known$PP[i]
+  num <- which(tolower(post[post$Subject_nr == pNumber,]$Spanish_Label) == tolower(known$Word[i]))
+  if (length(num)!= 0 ){
+    post[post$Subject_nr == pNumber,]$RT_new[num] <- NA
+    post[post$Subject_nr == pNumber,]$RT_pre[num] <- NA
+    post[post$Subject_nr == pNumber,]$Prelog[num] <- NA
+    post[post$Subject_nr == pNumber,]$RT_new_log[num] <- NA
+    post[post$Subject_nr == pNumber,]$RTdiff[num] <- NA
+    post[post$Subject_nr == pNumber,]$RTdifflog[num] <- NA
+    post[post$Subject_nr == pNumber,]$VoiceOnset[num] <- NA
+    post[post$Subject_nr == pNumber,]$Error[num] <- NA
+  }
+}
+
+# safe the full dataset as txt
+setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya")
+write.table(post, "CompleteDatasetConsolidation.txt", quote = F, row.names = F, col.names = T, sep = "\t")
+
+
+###### Analysis #####
+# read in the dataframe 
+setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya")
+post <- as.data.frame(read.delim("CompleteDatasetConsolidation.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+
+# setting variables
+post$Subject_nr <- as.factor(post$Subject_nr)
+post$Condition <- as.factor(post$Condition)
+post$Errorfact <- as.factor(post$Error)
+post$ConsolidationGroup <- as.factor(post$ConsolidationGroup)
+
+# checking coding instances with error code "6"
+#subset <- post[is.na(post$ErrorDetail)==0 && post$ErrorDetail == 6,] # only one case
+
 ###### How many people used articles on each test #####
-table(post$Subject_nr, post$ArticlesPre) # Pps 604, 618, 624 and 630 used a lot of articles, let's try to exclude them and see what happens to the effect
-#post<-post[!(post$Subject_nr== 604 | post$Subject_nr == 618 | post$Subject_nr == 624 | post$Subject_nr == 630),]
-#post <- droplevels(post)
+#table(post$Subject_nr, post$ArticlesPre)
 
 # exclude trials in which articles were used from RT analysis 
 for (i in 1:nrow(post)){
@@ -117,8 +249,10 @@ for (i in 1:nrow(post)){
     post$RT_new_log[i] <- NA
     post$RTdiff[i] <- NA
     post$RTdifflog[i] <- NA
+    post$VoiceOnset[i] <- NA
   } 
 }
+
 # check how many trials per person we have left
 table(post[is.na(post$RTdiff)==0,]$Subject_nr)
 table(post[is.na(post$RTdiff)==0,]$Subject_nr, post[is.na(post$RTdiff)==0,]$Condition) # per condition
@@ -128,31 +262,15 @@ article <- post[(is.na(post$ArticlesPre)==0 | is.na(post$ArticlesPost)==0),]
 article1 <- (table(article$Subject_nr, article$Condition)/23)*100
 article2 <- (table(article$Subject_nr)/46)*100
 
-
-### deleting trials of words that were already known in Spanish before the learning phaser
-known <- read.delim("KnownWords.txt")
-for (i in 1:nrow(known)){
-  pNumber <- known$PP[i]
-  num <- which(tolower(post[post$Subject_nr == pNumber,]$Spanish_Label) == tolower(known$Word[i]))
-  if (length(num)!= 0 ){
-    post[post$Subject_nr == pNumber,]$RT_new[num] <- NA
-    post[post$Subject_nr == pNumber,]$RT_pre[num] <- NA
-    post[post$Subject_nr == pNumber,]$Prelog[num] <- NA
-    post[post$Subject_nr == pNumber,]$RT_new_log[num] <- NA
-    post[post$Subject_nr == pNumber,]$RTdiff[num] <- NA
-    post[post$Subject_nr == pNumber,]$RTdifflog[num] <- NA
-    post[post$Subject_nr == pNumber,]$Error[num] <- NA
-  }
-}
+# possibly exclude people that don't have enough data left 
+#post<-post[!(post$Subject_nr== 604 | post$Subject_nr == 618 | post$Subject_nr == 624 | post$Subject_nr == 630),]
+#post$Subject_nr <- droplevels(post$Subject_nr)
 
 ########## Plots with GGplot ###########
-require(plyr)
-require(ggplot2)
 
 ### Fine-grained error rates ###
-
 # histogram of results 
-hist(post$Error)
+#hist(post$Error)
 
 ddply(post, .(Condition, Subject_nr, ConsolidationGroup), 
       summarise, N=length(Error), 
@@ -173,26 +291,25 @@ aggregatedError$sem <- aggregatedError$sem*100
 aggregatedError$condition_mean <- aggregatedError$condition_mean*100
 aggregatedError$condition_sem <- aggregatedError$condition_sem*100
 
+#lineplot <- ggplot(aggregatedError, aes(y = mean, x = Condition, fill = Subject_nr, group = ConsolidationGroup))
+#lineplot + geom_point(color="darkgrey") +
+#  geom_line(color="darkgrey") +
+#  geom_point(aes(y = condition_mean,
+#                 color = Condition), color="black") +
+#  geom_text(aes(label=Subject_nr)) +
+#  geom_line(aes(y = condition_mean,color="red")) +
+#  geom_errorbar(aes(ymin=condition_mean-condition_sem,
+#                    ymax=condition_mean+condition_sem,
+#                    color = "red",
+#                    na.rm = T),
+#                width = 0.5) +
+#  facet_wrap(~ConsolidationGroup) +
+#  theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
+#  scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+#  ylab("Percentage correctly recalled words in Spanish") +
+#  theme_bw()
 
-lineplot <- ggplot(aggregatedError, aes(y = mean, x = Condition, group = Subject_nr))
-lineplot + geom_point(color="darkgrey") +
-  geom_line(color="darkgrey") +
-  geom_point(aes(y = condition_mean,
-                 color = Condition), color="black") +
-  geom_text(aes(label=Subject_nr)) +
-  geom_line(aes(y = condition_mean,color="red")) +
-  geom_errorbar(aes(ymin=condition_mean-condition_sem,
-                    ymax=condition_mean+condition_sem,
-                    color = "red",
-                    na.rm = T),
-                width = 0.5) +
-  theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
-  scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
-  ylab("Percentage correctly recalled words in Spanish") +
-  # scale_color_manual(guide=F, "Frequency Condition", values=c("dodgerblue4","firebrick"),labels=c("High","Low")) +
-  theme_bw()
-
-barplot <- ggplot(aggregated_means_error, aes(y = condition_mean, x = Condition, fill = Condition, group = ConsolidationGroup))
+barplot <- ggplot(aggregated_means_error, aes(y = condition_mean, x = Condition, group = ConsolidationGroup))
 barplot + geom_bar(stat="identity", position=position_dodge()) +
   geom_errorbar(aes(ymin=condition_mean-condition_sem,
                     ymax=condition_mean+condition_sem),
@@ -241,37 +358,38 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
   theme_bw()
 
 
-#### Plot for RTs ###
+#### Plot for RTs raw ###
 ddply(post, .(Condition, Subject_nr, ConsolidationGroup), 
-      summarise, N=length(VoiceOnset), 
-      mean   = mean(VoiceOnset, na.rm = TRUE), 
-      sem = sd(VoiceOnset, na.rm = TRUE)/sqrt(N)) -> aggregatedrt
+      summarise, N=length(RT_new), 
+      mean   = mean(RT_new, na.rm = TRUE), 
+      sem = sd(RT_new, na.rm = TRUE)/sqrt(N)) -> aggregatedrt
 
 aggregated_means_rt<- ddply(post, .(Condition, ConsolidationGroup), 
                             summarise,
-                            condition_mean = mean(VoiceOnset,na.rm = T),
-                            condition_sem = sd(VoiceOnset,na.rm = T)/sqrt(length(VoiceOnset[!is.na(VoiceOnset)])))
+                            condition_mean = mean(RT_new,na.rm = T),
+                            condition_sem = sd(RT_new,na.rm = T)/sqrt(length(RT_new[!is.na(RT_new)])))
 
 aggregatedrt <- merge(aggregatedrt, aggregated_means_rt, by = c("Condition", "ConsolidationGroup"))
 
 
-lineplot <- ggplot(aggregatedrt, aes(y = mean, x = Condition, group = Subject_nr))
-lineplot + geom_point(color="darkgrey") +
-  geom_line(color="darkgrey") +
-  geom_point(aes(y = condition_mean,
-                 color = Condition), color="black") +
-  geom_text(aes(label=Subject_nr)) +
-  geom_line(aes(y = condition_mean,color="red")) +
-  geom_errorbar(aes(ymin=condition_mean-condition_sem,
-                    ymax=condition_mean+condition_sem,
-                    color = "red",
-                    na.rm = T),
-                width = 0.5) +
-  theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
-  scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
-  ylab("Naming latencies in ms") +
-  # scale_color_manual(guide=F, "Frequency Condition", values=c("dodgerblue4","firebrick"),labels=c("High","Low")) +
-  theme_bw()
+# lineplot <- ggplot(aggregatedrt, aes(y = mean, x = Condition, group = ConsolidationGroup))
+# lineplot + geom_point(color="darkgrey") +
+#   geom_line(color="darkgrey") +
+#   geom_point(aes(y = condition_mean,
+#                  color = Condition), color="black") +
+#   geom_text(aes(label=Subject_nr)) +
+#   geom_line(aes(y = condition_mean,color="red")) +
+#   geom_errorbar(aes(ymin=condition_mean-condition_sem,
+#                     ymax=condition_mean+condition_sem,
+#                     color = "red",
+#                     na.rm = T),
+#                 width = 0.5) +
+#   facet_wrap(~ConsolidationGroup) +
+#   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
+#   scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+#   ylab("Naming latencies in ms") +
+#   # scale_color_manual(guide=F, "Frequency Condition", values=c("dodgerblue4","firebrick"),labels=c("High","Low")) +
+#   theme_bw()
 
 barplot <- ggplot(aggregated_means_rt, aes(y = condition_mean, x = Condition, fill = Condition, group = ConsolidationGroup))
 barplot + geom_bar(stat="identity", position=position_dodge()) +
@@ -299,23 +417,24 @@ aggregated_means_rtdiff<- ddply(post, .(Condition, ConsolidationGroup),
 aggregatedrtdiff <- merge(aggregatedrtdiff, aggregated_means_rtdiff, by = c("Condition", "ConsolidationGroup"))
 
 
-lineplot <- ggplot(aggregatedrtdiff, aes(y = mean, x = Condition, group = Subject_nr))
-lineplot + geom_point(color="darkgrey") +
-  geom_line(color="darkgrey") +
-  geom_point(aes(y = condition_mean,
-                 color = Condition), color="black") +
-  geom_text(aes(label=Subject_nr)) +
-  geom_line(aes(y = condition_mean,color="red")) +
-  geom_errorbar(aes(ymin=condition_mean-condition_sem,
-                    ymax=condition_mean+condition_sem,
-                    color = "red",
-                    na.rm = T),
-                width = 0.5) +
-  theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
-  scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
-  ylab("Naming latencies in ms") +
-  # scale_color_manual(guide=F, "Frequency Condition", values=c("dodgerblue4","firebrick"),labels=c("High","Low")) +
-  theme_bw()
+# lineplot <- ggplot(aggregatedrtdiff, aes(y = mean, x = Condition, group = Consolidationgroup))
+# lineplot + geom_point(color="darkgrey") +
+#   geom_line(color="darkgrey") +
+#   geom_point(aes(y = condition_mean,
+#                  color = Condition), color="black") +
+#   geom_text(aes(label=Subject_nr)) +
+#   geom_line(aes(y = condition_mean,color="red")) +
+#   geom_errorbar(aes(ymin=condition_mean-condition_sem,
+#                     ymax=condition_mean+condition_sem,
+#                     color = "red",
+#                     na.rm = T),
+#                 width = 0.5) +
+#   facet_wrap(~ConsolidationGroup) +
+#   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
+#   scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+#   ylab("Naming latencies in ms") +
+#   # scale_color_manual(guide=F, "Frequency Condition", values=c("dodgerblue4","firebrick"),labels=c("High","Low")) +
+#   theme_bw()
 
 barplot <- ggplot(aggregated_means_rtdiff, aes(y = condition_mean, x = Condition, fill = Condition, group = ConsolidationGroup))
 barplot + geom_bar(stat="identity", position=position_dodge()) +
@@ -330,74 +449,77 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
   theme_bw()
 
 
-
-###### Stats on behavioral results ######
-
-require(lme4)
-require(lmerTest)
-require(lmtest)
+###### Stats ######
 
 # setting contrasts to the mean of each condition 
 contrasts(post$Condition) <- c(-0.5,0.5)
+contrasts(post$ConsolidationGroup) <- c(-0.5,0.5)
 # turning my factors into numerical factors reflecting a dummy coding 
 post$ConditionN <- (-(as.numeric(post$Condition)-2))-0.5
+post$ConsolidationGroupN <- (-(as.numeric(post$ConsolidationGroup)-2))-0.5
 
 
 ###### Accuracy after interference #####
 
 ## Full model with maximal random effects structure
-modelfull <- glmer(Error ~ ConditionN + (1|Item) + (1+ConditionN|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+modelfull <- glmer(Error ~ ConditionN*ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
 summary(modelfull)
 # the model converges with the maximal justifyable random effects structure, and none of the random effects are highly correlated with each other, so we leave it this complex 
 # no comparisons needed, you report the beta weights from this model in a table in your paper
 
 ## Simple Anova for accuracy
-## Arcsine transformed data Anova
-anova <- aov(Error ~ Condition, data = post)
+# aggregate data over subjects 
+agg <- aggregate(post$Error, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean)
+## Arcsine transformed error rates
+anova <- aov(asin(sqrt(agg$Error)) ~ Condition*ConsolidationGroup, data = agg)
 summary(anova)
 
 
 ## Model reporting - fullest model above
 # It is best to report Chi-square p-values for each of the effects serpately 
 # First let's take out the main effect for Condition (-Condition below in the code)
-modelCondition<- glmer(Error ~ ConditionN -ConditionN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+modelCondition<- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
 anova(modelfull, modelCondition)
 # The chi-suare p-value from the Anova table is the p-value for the main effect of Condition. This p-value is slightly higher than the one from the model output itself because the distribution against which it is calcualted is different (chi-square vs z-distribution)
 #IMPORTANT: the intercept in these models is always the grand mean: the effect over all conditions: mean over the mean of each cell. cells being: Interference condition for Block 1, Interference Block 2, No interference Block 1, No interference Block 2
 # So now it is not correct anymore what you say in your methods section: the intercept DOES NOT reflect the no interference condition any longer, it represents the mean of both conditions over both blocks!!! 
 # The p-values you get out of these comparisons are what you report in the paper and in the table along with the estimates.  
+modelConsolCondition<- glmer(Error ~ ConditionN*ConsolidationGroupN -ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+anova(modelfull, modelConsolCondition)
+modelInteraction<- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN:ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+anova(modelfull, modelInteraction)
+
 
 ###### Modelling for RTs #####
 # simple Anova for RTs (log-transformed)
-anova_rt <- aov(RT_new_log ~ Condition, data = post)
+# first aggregate data
+aggrt <- aggregate(post$RT_new_log, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean)
+anova_rt <- aov(RT_new_log ~ Condition*ConsolidationGroup, data = aggrt)
 summary(anova_rt)
 
 ## Full model on log transformed data 
 # Full model with maximum random effects structure 
 # We take the log of the reaction times because the distribution is very non-normal, and we subtract 2000ms because that's the lowest value there is currently (due to 2s delay), log transform works better if there are values close to 0 and between 0-1
-modelRT2full <- lmer(RTdifflog ~ ConditionN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = post)
+modelRT2full <- lmer(RTdifflog ~ ConditionN*ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = post)
 summary(modelRT2full)
 
 ## Model reporting - fullest model above
-# Same as above
 # First let's take out the main effect for Condition (-Condition below in the code)
-modelRT2Condition <- lmer(RTdifflog ~ ConditionN - ConditionN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = post)
+modelRT2Condition <- lmer(RTdifflog ~ ConditionN*ConsolidationGroupN - ConditionN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = post)
 anova(modelRT2full, modelRT2Condition)
-# IMPORTANT: the intercept in these models is always the grand mean: the effect over all conditions: mean over the mean of each cell. cells being: Interference condition for Block 1, Interference Block 2, No interference Block 1, No interference Block 2
-# So now it is not correct anymore what you say in your methods section: the intercept DOES NOT reflect the no interference condition any longer, it represents the mean of both conditions over both blocks!!! 
-# The p-values you get out of these comparisons are what you report in the paper and in the table along with the estimates. 
-
+modelRT2Consol <- lmer(RTdifflog ~ ConditionN*ConsolidationGroupN - ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = post)
+anova(modelRT2full, modelRT2Consol)
+modelRT2Interaction <- lmer(RTdifflog ~ ConditionN*ConsolidationGroupN - ConditionN:ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = post)
+anova(modelRT2full, modelRT2Interaction)
 
 
 ### Correlations with LexTale score, interference performance 
-
-#LexTale
+# LexTale
 library(tidyr)
-A = c(601:603, 608, 610:620, 622, 623, 625:631)
 data_list <- list()
 for (i in 1:length(A)){
   pNumber = A[i]
-  wd <- paste("//cnas.ru.nl/wrkgrp/STD-Honours-Mickan/BACK-UP/", pNumber, "/", sep="")
+  wd <- paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/", sep="")
   setwd(wd)
   infile1 <- paste(pNumber,"score_LexTale.txt",sep="_")
   
@@ -424,7 +546,7 @@ data_list <- list()
 for (i in 1:length(A)){
   pNumber = A[i]
   #setwd(file.path("//cnas.ru.nl/Wrkgrp/L2-Attrition-Mickan/RESULTS_EXP1/", pNumber))
-  wd <- paste("//cnas.ru.nl/wrkgrp/STD-Honours-Mickan/BACK-UP/", pNumber, "/", pNumber, "_PicNaming", sep="")
+  wd <- paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/", pNumber, "_PicNamingAdap", sep="")
   setwd(wd)
   infile1 <- paste(pNumber,"LearnPicNaming_A.txt",sep="_")
   
@@ -464,12 +586,13 @@ colnames(forgetting) <- c("Interference_Error", "NoInterference_Error","Differen
 
 ### Mean learning success at posttest in Spanish
 data_list <- list()
+data_list2 <- list()
 for (i in 1:length(A)){
   pNumber = A[i]
   #setwd(file.path("//cnas.ru.nl/Wrkgrp/L2-Attrition-Mickan/RESULTS_EXP1/", pNumber))
-  wd <- paste("//cnas.ru.nl/wrkgrp/STD-Honours-Mickan/BACK-UP/", pNumber, "/", pNumber, "_PosttestSpa", sep="")
+  wd <- paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/", pNumber, "_Posttest_a", sep="")
   setwd(wd)
-  infile1 <- paste(pNumber,"Posttest.txt",sep="_")
+  infile1 <- paste(pNumber,"Posttest_A.txt",sep="_")
   
   currentFile <- as.data.frame(read.delim(infile1, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
   
@@ -479,31 +602,53 @@ for (i in 1:length(A)){
   
   data_list[[i]] <- currentFile
   
+  wd2 <- paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber, "/", pNumber, "_Posttest_b", sep="")
+  setwd(wd2)
+  infile2 <- paste(pNumber,"Posttest_B.txt",sep="_")
+  
+  currentFile2 <- as.data.frame(read.delim(infile2, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+  
+  if (length(currentFile2[currentFile2$Error == 999,]$Error) > 0){
+    currentFile2[currentFile2$Error == 999,]$Error<-1
+  }
+  
+  data_list2[[i]] <- currentFile2
+  
   print(A[i])
 }
-posttestSpanish <- rbindlist(data_list)
-m1 <- 100-(tapply(posttestSpanish$Error, posttestSpanish$Subject_nr, mean)*100)
-m2 <- tapply(posttestSpanish$VoiceOnset, posttestSpanish$Subject_nr, mean)
+
+posttestSpanishA <- rbindlist(data_list)
+posttestSpanishB <- rbindlist(data_list2)
+
+#learning success posttest A
+m1a <- 100-(tapply(posttestSpanishA$Error, posttestSpanishA$Subject_nr, mean)*100)
+m2a <- tapply(posttestSpanishA$VoiceOnset, posttestSpanishA$Subject_nr, mean)
+#learning success posttest B
+m1b <- 100-(tapply(posttestSpanishB$Error, posttestSpanishB$Subject_nr, mean)*100)
+m2b <- tapply(posttestSpanishB$VoiceOnset, posttestSpanishB$Subject_nr, mean)
+
 
 ### Correlations #### 
-correlations <- matrix(nrow = length(A), ncol = 7)
+correlations <- matrix(nrow = length(A), ncol = 9)
 for (i in 1:length(A)) {
   pNumber = A[i]
   correlations[i,1] <- pNumber
   correlations[i,2] <- forgetting[i,3]                                    # Forgetting score error rate
   correlations[i,3] <- forgetting[i,4]                                    # Forgetting score RT
-  correlations[i,4] <- m1[[i]]                                              # Learning success Spanish posttest
+  correlations[i,4] <- m1a[[i]]                                              # Learning success Spanish posttest A
+  correlations[i,5] <- m1b[[i]]                                              # Learning success Spanish posttest b
   #correlations[i,5] <- blocks[[i,1]]                                         # Number of blocks in adaptive learning
   #correlations[i,6] <- successAdap[[i]]                                    # Percent learned after second adaptive round
   #correlations[i,7] <- expavg[[i,1]]                                       # Average exposures to items (minimum 8)
   num <- which(tolower(as.character(rownames(pretest)))== pNumber)
-  correlations[i,5] <- pretest[[num,1]]                                # Pretest percent known among first 101 words
+  correlations[i,6] <- pretest[[num,1]]                                # Pretest percent known among first 101 words
   #correlations[i,15] <- LBQ$SRmean[i]                                      # Self-ratings average Spanish  
   #correlations[i,19] <- LBQ$SpanishExposureLengthMonth[i]                  # Spanish exposure in month
   #correlations[i,20] <- LBQ$FreqUseTotal[i]                                # Amount of time spent with spanish per week
-  correlations[i,6] <- m2[[i]]                                     # Mean RT during Spanish Posttest
+  correlations[i,7] <- m2a[[i]]                                      # Mean RT during Spanish Posttest a
+  correlations[i,8] <- m2b[[i]]                                      # Mean RT during Spanish Posttest b
   num <- which(tolower(as.character(rownames(lextalescore)))== pNumber)
-  correlations[i,7] <- lextalescore[[i,2]]                                   # Lextale score
+  correlations[i,9] <- lextalescore[[i,2]]                                   # Lextale score
 }
 #as.data.frame(correlations)->correlations
 #colnames(correlations) <- c("Pnumber","Forgetting_Error","Forgetting_RT","MeanLearnSpa","PretestScore", "MeanRTSpanishPost","LexTale")
@@ -566,11 +711,10 @@ mean(LBQfin$EnglishProficiencyReading)
 mean(LBQfin$EnglishProficiencyWriting)
 
 #### Pretest English performance ####
-A <- c(601:604, 608, 610:620, 622:631)
 data_list <- list()
 for (i in 1:length(A)){
   pNumber <- A[i]
-  wd <- paste("//cnas.ru.nl/wrkgrp/STD-Honours-Mickan/BACK-UP/", pNumber,"/",pNumber,"_Pretest/", sep="")
+  wd <- paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/BACK-UP/", pNumber,"/",pNumber,"_Pretest/", sep="")
   setwd(wd)
   infile1 <- paste(pNumber,"Pretest.txt",sep="_")
   pretest <- as.data.frame(read.delim(infile1, sep = "\t", header = T, skipNul = TRUE))
