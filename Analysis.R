@@ -13,7 +13,7 @@ require(lmerTest)
 require(lmtest)
 
 # initiate participants
-A = c(701:722, 724:749, 751)
+A = c(749:752)
 
 # Transfer hand-coded RTs from Praat output to English posttest and pretest files
 data_list <- list()
