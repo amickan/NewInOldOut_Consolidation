@@ -26,6 +26,7 @@ for (i in 1:length(A)){
   pretest <- as.data.frame(read.delim("PretestArticles.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
   posttest <- as.data.frame(read.delim("FinaltestArticles.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
   
+  setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest_Coding")
   data <- read.delim(infile1, header = F)
   data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
   data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
