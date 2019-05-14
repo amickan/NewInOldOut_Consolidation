@@ -13,7 +13,7 @@ require(lmerTest)
 require(lmtest)
 
 # initiate participants
-A = c(749:752)
+A = c(701:722, 724:755)
 
 # Transfer hand-coded RTs from Praat output to English posttest and pretest files
 data_list <- list()
@@ -112,9 +112,9 @@ for (i in 1:length(A)){
   wd2 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/Spanish_Posttest_a/",pNumber, "_Posttest_a", sep="")
   wd3 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Pretest/",pNumber, "_Pretest_subset", sep="")
   wd4 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/Spanish_Posttest_b/",pNumber, "_Posttest_b", sep="")
-  infile1 <- paste(pNumber,"Finaltest.txt",sep="_")
+  infile1 <- paste(pNumber,"Finaltest_new.txt",sep="_")
   infile2 <- paste(pNumber,"Posttest_A.txt",sep="_")
-  infile3 <- paste(pNumber,"Pretest.txt",sep="_")
+  infile3 <- paste(pNumber,"Pretest_new.txt",sep="_")
   infile4 <- paste(pNumber,"Posttest_B.txt",sep="_")
   
   # read in Spanish postest file (only the second one for now)
@@ -178,14 +178,23 @@ for (i in 1:length(A)){
 }
 post <- rbindlist(data_list)
 
+# possibly need to rename first column 
+colnames(post)[1] <- "Subject_nr"
+
 # add a group variable
 for (i in 1:nrow(post)){
-  if (post$Subject_nr[i] <726){
+  if (post$Subject_nr[i] < 726){
     post$ConsolidationGroup[i] <- "Consolidation"
-  } else {
+  } else if (post$Subject_nr[i] > 725 && post$Subject_nr[i] < 751) {
     post$ConsolidationGroup[i] <- "NoConsolidation"
-  }
+  } else if (post$Subject_nr[i] == 751 || post$Subject_nr[i] == 753 || post$Subject_nr[i] == 755) {
+    post$ConsolidationGroup[i] <- "Consolidation"
+  } else if (post$Subject_nr[i] == 752 || post$Subject_nr[i] == 754) {
+    post$ConsolidationGroup[i] <- "NoConsolidation"}
 }
+
+# check group assignment 
+#table(post$Subject_nr, post$ConsolidationGroup)
 
 # checking RTs
 min(post$RT_new, na.rm=T)
@@ -201,10 +210,21 @@ post$RTdifflog <- post$Prelog - post$RT_new_log
 
 ### deleting trials of words that were already known in Spanish before the learning phase
 setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
-known <- read.delim("KnownWords.txt")
+known <- read.delim("KnownUnknown.txt")
 for (i in 1:nrow(known)){
-  pNumber <- known$PP[i]
-  num <- which(tolower(post[post$Subject_nr == pNumber,]$Spanish_Label) == tolower(known$Word[i]))
+  pNumber <- known$Participant[i]
+  num <- which(tolower(post[post$Subject_nr == pNumber,]$Spanish_Label) == tolower(known$KnownSpa[i]))
+  if (length(num)!= 0 ){
+    post[post$Subject_nr == pNumber,]$RT_new[num] <- NA
+    post[post$Subject_nr == pNumber,]$RT_pre[num] <- NA
+    post[post$Subject_nr == pNumber,]$Prelog[num] <- NA
+    post[post$Subject_nr == pNumber,]$RT_new_log[num] <- NA
+    post[post$Subject_nr == pNumber,]$RTdiff[num] <- NA
+    post[post$Subject_nr == pNumber,]$RTdifflog[num] <- NA
+    post[post$Subject_nr == pNumber,]$VoiceOnset[num] <- NA
+    post[post$Subject_nr == pNumber,]$Error[num] <- NA
+  }
+  num <- which(tolower(post[post$Subject_nr == pNumber,]$Item) == tolower(known$UnknownEn[i]))
   if (length(num)!= 0 ){
     post[post$Subject_nr == pNumber,]$RT_new[num] <- NA
     post[post$Subject_nr == pNumber,]$RT_pre[num] <- NA
@@ -218,20 +238,21 @@ for (i in 1:nrow(known)){
 }
 
 # safe the full dataset as txt
-setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya")
-write.table(post, "CompleteDatasetConsolidation.txt", quote = F, row.names = F, col.names = T, sep = "\t")
+#setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya")
+#write.table(post, "CompleteDatasetConsolidation.txt", quote = F, row.names = F, col.names = T, sep = "\t")
 
 
 ###### Analysis #####
 # read in the dataframe 
-setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya")
-post <- as.data.frame(read.delim("CompleteDatasetConsolidation.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+#setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya")
+#post <- as.data.frame(read.delim("CompleteDatasetConsolidation.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
 
 # setting variables
 post$Subject_nr <- as.factor(post$Subject_nr)
 post$Condition <- as.factor(post$Condition)
 post$Errorfact <- as.factor(post$Error)
 post$ConsolidationGroup <- as.factor(post$ConsolidationGroup)
+post$Item <- as.factor(post$Item)
 
 # checking coding instances with error code "6"
 #subset <- post[is.na(post$ErrorDetail)==0 && post$ErrorDetail == 6,] # only one case
@@ -257,6 +278,8 @@ for (i in 1:nrow(post)){
 # check how many trials per person we have left
 table(post[is.na(post$RTdiff)==0,]$Subject_nr)
 table(post[is.na(post$RTdiff)==0,]$Subject_nr, post[is.na(post$RTdiff)==0,]$Condition) # per condition
+# 719 and 729 and 738 are problematic with less than 15 trials in one or both conditions
+# 716 and 718 and 736 and 737 are also problematic because the conditions are very unbalanced, 13 vs. 23
 
 # percentage of article traisl per person per condition
 article <- post[(is.na(post$ArticlesPre)==0 | is.na(post$ArticlesPost)==0),]
@@ -264,12 +287,13 @@ article1 <- (table(article$Subject_nr, article$Condition)/23)*100
 article2 <- (table(article$Subject_nr)/46)*100
 
 # possibly exclude people that don't have enough data left 
-#post<-post[!(post$Subject_nr== 604 | post$Subject_nr == 618 | post$Subject_nr == 624 | post$Subject_nr == 630),]
-#post$Subject_nr <- droplevels(post$Subject_nr)
+## THIS NEEDS TO BE DISCUSSED WITH JAMES AND KRISTIN
+post<-post[!(post$Subject_nr== 719 | post$Subject_nr == 738 | post$Subject_nr == 716 | post$Subject_nr == 718 | post$Subject_nr == 736 | post$Subject_nr == 737),]
+post$Subject_nr <- droplevels(post$Subject_nr)
 
 ########## Plots with GGplot ###########
 
-### Fine-grained error rates ###
+### Error rates ###
 # histogram of results 
 #hist(post$Error)
 
@@ -316,7 +340,7 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
                     ymax=condition_mean+condition_sem),
                 width = 0.5, position=position_dodge(0.9)) +
   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
-  coord_cartesian(ylim=c(0,7)) +
+  coord_cartesian(ylim=c(0,4)) +
   facet_wrap(~ConsolidationGroup) +
   scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2, expand = c(0.1,0.1)) +
   ylab("Percentage incorrectly recalled words in English") +
@@ -465,36 +489,32 @@ post$ConsolidationGroupN <- (-(as.numeric(post$ConsolidationGroup)-2))-0.5
 ## Full model with maximal random effects structure
 modelfull <- glmer(Error ~ ConditionN*ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
 summary(modelfull)
-# the model converges with the maximal justifyable random effects structure, and none of the random effects are highly correlated with each other, so we leave it this complex 
-# no comparisons needed, you report the beta weights from this model in a table in your paper
+# the model converges with the maximal justifyable random effects structure, but the random slope is perfectly correlated with the intercept for subject, so we leave the slope out
+modelfullfinal <- glmer(Error ~ ConditionN*ConsolidationGroupN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+summary(modelfullfinal)
+
+# model comparisons to obtain chi-square p-values, note that these p-values are slightly different from the ones that the summary function returns, that's because they are calculated differently, but they usually lead to the same conclusions, and the method we use here is recommended for small sample sizes
+modelcond <- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+anova(modelfullfinal, modelcond)
+modelconsol <- glmer(Error ~ ConditionN*ConsolidationGroupN -ConsolidationGroupN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+anova(modelfullfinal, modelconsol)
+modelinteraction <- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN:ConsolidationGroupN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+anova(modelfullfinal, modelinteraction)
 
 ## Simple Anova for accuracy
 # aggregate data over subjects 
-agg <- aggregate(post$Error, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean)
+agg <- aggregate(post$Error, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean, na.rm = T)
+colnames(agg) <- c("Subject_nr", "Condition", "ConsolidationGroup", "Error")
 ## Arcsine transformed error rates
 anova <- aov(asin(sqrt(agg$Error)) ~ Condition*ConsolidationGroup, data = agg)
 summary(anova)
 
 
-## Model reporting - fullest model above
-# It is best to report Chi-square p-values for each of the effects serpately 
-# First let's take out the main effect for Condition (-Condition below in the code)
-modelCondition<- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
-anova(modelfull, modelCondition)
-# The chi-suare p-value from the Anova table is the p-value for the main effect of Condition. This p-value is slightly higher than the one from the model output itself because the distribution against which it is calcualted is different (chi-square vs z-distribution)
-#IMPORTANT: the intercept in these models is always the grand mean: the effect over all conditions: mean over the mean of each cell. cells being: Interference condition for Block 1, Interference Block 2, No interference Block 1, No interference Block 2
-# So now it is not correct anymore what you say in your methods section: the intercept DOES NOT reflect the no interference condition any longer, it represents the mean of both conditions over both blocks!!! 
-# The p-values you get out of these comparisons are what you report in the paper and in the table along with the estimates.  
-modelConsolCondition<- glmer(Error ~ ConditionN*ConsolidationGroupN -ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
-anova(modelfull, modelConsolCondition)
-modelInteraction<- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN:ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = binomial, control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
-anova(modelfull, modelInteraction)
-
-
 ###### Modelling for RTs #####
 # simple Anova for RTs (log-transformed)
 # first aggregate data
-aggrt <- aggregate(post$RT_new_log, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean)
+aggrt <- aggregate(post$RT_new_log, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean, na.rm = T)
+colnames(aggrt) <- c("Subject_nr", "Condition", "ConsolidationGroup", "RT_new_log")
 anova_rt <- aov(RT_new_log ~ Condition*ConsolidationGroup, data = aggrt)
 summary(anova_rt)
 
@@ -533,7 +553,7 @@ for (i in 1:length(A)){
 lextale <- rbindlist(data_list)
 
 lextalescore <- lextale[-seq(1, nrow(lextale), 2),]
-lextalescore <- separate(data = lextalescore, col = Number.of.correctly.identified.words..35, into = c("text", "score"), sep = "\\: ")
+lextalescore <- separate(data = lextalescore, col = Number.of.correctly.identified.words..19, into = c("text", "score"), sep = "\\: ")
 lextalescore[,2] <- as.numeric(unlist(lextalescore[,2]))
 
 Pnames <- A
@@ -630,7 +650,7 @@ m2b <- tapply(posttestSpanishB$VoiceOnset, posttestSpanishB$Subject_nr, mean)
 
 
 ### Correlations #### 
-correlations <- matrix(nrow = length(A), ncol = 9)
+correlations <- matrix(nrow = length(A), ncol = 11)
 for (i in 1:length(A)) {
   pNumber = A[i]
   correlations[i,1] <- pNumber
@@ -638,24 +658,24 @@ for (i in 1:length(A)) {
   correlations[i,3] <- forgetting[i,4]                                    # Forgetting score RT
   correlations[i,4] <- m1a[[i]]                                              # Learning success Spanish posttest A
   correlations[i,5] <- m1b[[i]]                                              # Learning success Spanish posttest b
-  #correlations[i,5] <- blocks[[i,1]]                                         # Number of blocks in adaptive learning
-  #correlations[i,6] <- successAdap[[i]]                                    # Percent learned after second adaptive round
-  #correlations[i,7] <- expavg[[i,1]]                                       # Average exposures to items (minimum 8)
-  num <- which(tolower(as.character(rownames(pretest)))== pNumber)
-  correlations[i,6] <- pretest[[num,1]]                                # Pretest percent known among first 101 words
-  #correlations[i,15] <- LBQ$SRmean[i]                                      # Self-ratings average Spanish  
-  #correlations[i,19] <- LBQ$SpanishExposureLengthMonth[i]                  # Spanish exposure in month
-  #correlations[i,20] <- LBQ$FreqUseTotal[i]                                # Amount of time spent with spanish per week
-  correlations[i,7] <- m2a[[i]]                                      # Mean RT during Spanish Posttest a
-  correlations[i,8] <- m2b[[i]]                                      # Mean RT during Spanish Posttest b
+  correlations[i,5] <- blocks[[i,1]]                                         # Number of blocks in adaptive learning
+  correlations[i,7] <- successAdap[[i]]                                    # Percent learned after second adaptive round
+  correlations[i,8] <- expavg[[i,1]]                                       # Average exposures to items (minimum 8)
+  #num <- which(tolower(as.character(rownames(pretest)))== pNumber)
+  #correlations[i,9] <- pretest[[num,1]]                                # Pretest percent known among first 101 words
+  #correlations[i,9] <- LBQ$SRmean[i]                                      # Self-ratings average Spanish  
+  #correlations[i,10] <- LBQ$SpanishExposureLengthMonth[i]                  # Spanish exposure in month
+  #correlations[i,11] <- LBQ$FreqUseTotal[i]                                # Amount of time spent with spanish per week
+  correlations[i,9] <- m2a[[i]]                                      
+  correlations[i,10] <- m2b[[i]]                                      
   num <- which(tolower(as.character(rownames(lextalescore)))== pNumber)
-  correlations[i,9] <- lextalescore[[i,2]]                                   # Lextale score
+  correlations[i,11] <- lextalescore[[i,2]]                                   # Lextale score
 }
-#as.data.frame(correlations)->correlations
-#colnames(correlations) <- c("Pnumber","Forgetting_Error","Forgetting_RT","MeanLearnSpa","PretestScore", "MeanRTSpanishPost","LexTale")
+as.data.frame(correlations)->correlations
+colnames(correlations) <- c("Pnumber","Forgetting_Error","Forgetting_RT","MeanLearnSpaA","MeanLearnSpaB", "BlocksinAdap","AdapSuccess", "AvgExp", "MeanLearnSpaA2", "MeanLearnSpaB2", "Lextale")
 
 require(Hmisc)
-corrtable <- round(rcorr(correlations),2)
+corrtable <- round(rcorr(correlations[,2:11]),2)
 
 cor.test.p <- function(x){
   FUN <- function(x, y) cor.test(x, y)[["p.value"]]
