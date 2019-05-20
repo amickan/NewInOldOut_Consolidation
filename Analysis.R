@@ -262,7 +262,7 @@ post$Item <- as.factor(post$Item)
 
 # exclude trials in which articles were used from RT analysis 
 for (i in 1:nrow(post)){
-  if (is.na(post$ArticlesPost[i]) == 0 && is.na(post$ArticlesPre[i]) == 0){
+  if (is.na(post$ArticlesPost[i]) == 1 && is.na(post$ArticlesPre[i]) == 1){
   } else if (is.na(post$ArticlesPost[i]) == 0 && is.na(post$ArticlesPre[i]) == 0) {
   } else if (is.na(post$ArticlesPost[i]) == 0 | is.na(post$ArticlesPre[i]) == 0){
     post$RT_new[i] <- NA
@@ -277,9 +277,12 @@ for (i in 1:nrow(post)){
 
 # check how many trials per person we have left
 table(post[is.na(post$RTdiff)==0,]$Subject_nr)
-table(post[is.na(post$RTdiff)==0,]$Subject_nr, post[is.na(post$RTdiff)==0,]$Condition) # per condition
-# 719 and 729 and 738 are problematic with less than 15 trials in one or both conditions
-# 716 and 718 and 736 and 737 are also problematic because the conditions are very unbalanced, 13 vs. 23
+table(post[is.na(post$RTdiff)==0,]$Subject_nr, post[is.na(post$RTdiff)==0,]$Condition)
+trialscond <- as.data.frame(table(post[is.na(post$RTdiff)==0,]$Subject_nr, post[is.na(post$RTdiff)==0,]$Condition)) # per condition
+trialscond$Ratio <- trialscond[trialscond$Var2==1,]$Freq/trialscond[trialscond$Var2==2,]$Freq
+trialscond <- trialscond[trialscond$Var2==1,]
+## we want a ratio of condition trials of at least 69%: that means excluding 716, 718, 719, 736
+## we also want to exclude people with cell sizes below 12 (half the trials): no extra exclusions necessary
 
 # percentage of article traisl per person per condition
 article <- post[(is.na(post$ArticlesPre)==0 | is.na(post$ArticlesPost)==0),]
@@ -288,7 +291,7 @@ article2 <- (table(article$Subject_nr)/46)*100
 
 # possibly exclude people that don't have enough data left 
 ## THIS NEEDS TO BE DISCUSSED WITH JAMES AND KRISTIN
-post<-post[!(post$Subject_nr== 719 | post$Subject_nr == 738 | post$Subject_nr == 716 | post$Subject_nr == 718 | post$Subject_nr == 736 | post$Subject_nr == 737),]
+post<-post[!(post$Subject_nr== 716 | post$Subject_nr== 719 | post$Subject_nr == 736 | post$Subject_nr == 718),]
 post$Subject_nr <- droplevels(post$Subject_nr)
 
 ########## Plots with GGplot ###########
@@ -508,6 +511,12 @@ colnames(agg) <- c("Subject_nr", "Condition", "ConsolidationGroup", "Error")
 ## Arcsine transformed error rates
 anova <- aov(asin(sqrt(agg$Error)) ~ Condition*ConsolidationGroup, data = agg)
 summary(anova)
+
+## t-tests 
+consol <- agg[agg$ConsolidationGroup=="Consolidation",]
+noconsol <- agg[agg$ConsolidationGroup=="NoConsolidation",]
+t.test(consol[consol$Condition==1,]$Error, consol[consol$Condition==2,]$Error, paired = T)
+t.test(noconsol[noconsol$Condition==1,]$Error, noconsol[noconsol$Condition==2,]$Error, paired = T)
 
 
 ###### Modelling for RTs #####
