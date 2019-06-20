@@ -1,15 +1,15 @@
 ### Analysis with honours data: comparing the no consolidation group with the Honours group 
 
 ## if you've loaded in the consolidation data, subset the dataframe to only the no consolidation group 
-#post[post$ConsolidationGroup=="NoConsolidation",]->noconsol
-post[,-c(13)] -> noconsol
-noconsol<-noconsol[!(noconsol$Subject_nr== 729 | noconsol$Subject_nr== 719 | noconsol$Subject_nr == 738 | noconsol$Subject_nr == 716 | noconsol$Subject_nr == 718 | noconsol$Subject_nr == 736 | noconsol$Subject_nr == 737),]
+post[post$ConsolidationGroup=="NoConsolidation",]->noconsol
+noconsol[,-c(13)] -> noconsol
+#noconsol<-noconsol[!(noconsol$Subject_nr== 729 | noconsol$Subject_nr== 719 | noconsol$Subject_nr == 738 | noconsol$Subject_nr == 716 | noconsol$Subject_nr == 718 | noconsol$Subject_nr == 736 | noconsol$Subject_nr == 737),]
+postrt[postrt$ConsolidationGroup=="NoConsolidation",]->noconsolrt
+noconsolrt[,-c(13)] -> noconsolrt
 
 ## read in Honours data and preprocess accordingly 
 setwd("U:/PhD/EXPERIMENT 3 -Honours/Script/AnalysisScript")
 post <- read.table("CompleteDataset_Honours.txt", header = T)
-post<-post[!(post$Subject_nr == 604 | post$Subject_nr == 624),]
-post <- droplevels(post)
 
 # new corrected for reaction time
 post$RT_new_log <- log(post$RT_new)
@@ -47,13 +47,19 @@ for (i in 1:nrow(known)){
   }
 }
 
+postrt<-post[!(post$Subject_nr == 604 | post$Subject_nr == 624),]
+postrt <- droplevels(postrt)
+
 ### append dataframes 
 #colorder <- colnames(post)
 noconsol2 = noconsol[, c("Subject_nr", "Trial_nr", "Item", "Spanish_Label", "Condition", "VoiceOnset", "Error", "ErrorDetail","RT_new","RT_pre","ArticlesPre","ArticlesPost","RT_new_log","RTdiff","Prelog","RTdifflog")]
 rbind(post, noconsol2) -> complete
 
-# add a group names to the dataframe
+noconsol2rt = noconsolrt[, c("Subject_nr", "Trial_nr", "Item", "Spanish_Label", "Condition", "VoiceOnset", "Error", "ErrorDetail","RT_new","RT_pre","ArticlesPre","ArticlesPost","RT_new_log","RTdiff","Prelog","RTdifflog")]
+rbind(postrt, noconsol2rt) -> completert
 
+# add a group names to the dataframe
+complete$Subject_nr <- as.numeric(as.character(complete$Subject_nr))
 for (i in 1:nrow(complete)){
   if (complete$Subject_nr[i] > 700 && complete$Subject_nr[i] < 726){
     complete$Group[i] <- "Consolidation"
@@ -67,12 +73,32 @@ for (i in 1:nrow(complete)){
     complete$Group[i] <- "Honours"}
 }
 
+completert$Subject_nr <- as.numeric(as.character(completert$Subject_nr))
+for (i in 1:nrow(completert)){
+  if (completert$Subject_nr[i] > 700 && completert$Subject_nr[i] < 726){
+    completert$Group[i] <- "Consolidation"
+  } else if (completert$Subject_nr[i] > 725 && completert$Subject_nr[i] < 751) {
+    completert$Group[i] <- "NoConsolidation"
+  } else if (completert$Subject_nr[i] == 751 || completert$Subject_nr[i] == 753 || completert$Subject_nr[i] == 755) {
+    completert$Group[i] <- "Consolidation"
+  } else if (completert$Subject_nr[i] == 752 || completert$Subject_nr[i] == 754) {
+    completert$Group[i] <- "NoConsolidation"
+  } else if (completert$Subject_nr[i] < 700){
+    completert$Group[i] <- "Honours"}
+}
+
 # setting variables
 complete$Subject_nr <- as.factor(complete$Subject_nr)
 complete$Condition <- as.factor(complete$Condition)
 complete$Errorfact <- as.factor(complete$Error)
 complete$Group <- as.factor(complete$Group)
 complete$Item <- as.factor(complete$Item)
+
+completert$Subject_nr <- as.factor(completert$Subject_nr)
+completert$Condition <- as.factor(completert$Condition)
+completert$Errorfact <- as.factor(completert$Error)
+completert$Group <- as.factor(completert$Group)
+completert$Item <- as.factor(completert$Item)
 
 #table(complete$Group, complete$Subject_nr)
 
@@ -111,12 +137,12 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
 
 
 #### Plot for RTs difference ###
-ddply(complete, .(Condition, Subject_nr, Group), 
+ddply(completert, .(Condition, Subject_nr, Group), 
       summarise, N=length(RTdiff), 
       mean   = mean(RTdiff, na.rm = TRUE), 
       sem = sd(RTdiff, na.rm = TRUE)/sqrt(N)) -> aggregatedrtdiff
 
-aggregated_means_rtdiff<- ddply(complete, .(Condition, Group), 
+aggregated_means_rtdiff<- ddply(completert, .(Condition, Group), 
                                 summarise,
                                 condition_mean = mean(RTdiff,na.rm = T),
                                 condition_sem = sd(RTdiff,na.rm = T)/sqrt(length(RTdiff[!is.na(RTdiff)])))
