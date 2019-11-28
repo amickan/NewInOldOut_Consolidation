@@ -1,5 +1,5 @@
 ### Consolidation project analysis ###
-# last updated by Anne Mickan, April 2nd, 2019
+# last updated by Anne Mickan, September 19, 2019
 
 # load required pacakges
 require(reshape)
@@ -12,96 +12,100 @@ require(lme4)
 require(lmerTest)
 require(lmtest)
 
+
 # initiate participants
-A = c(701:722, 724:755)
+A = c(701:722, 724:732, 734:736, 737, 738:769,771:774, 776:785, 787)
 
 # Transfer hand-coded RTs from Praat output to English posttest and pretest files
-data_list <- list()
-
-for (i in 1:length(A)){
-  pNumber = A[i]
-  setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
-  infile1 <- paste(pNumber,"Engfinal_logfile_manual.txt",sep="_")
-  infile3 <- paste(pNumber,"Pretest_logfile_manual.txt",sep="_")
-  pretest <- as.data.frame(read.delim("PretestArticles.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
-  posttest <- as.data.frame(read.delim("FinaltestArticles.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
-  
-  setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest_Coding")
-  data <- read.delim(infile1, header = F)
-  data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
-  data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
-  as.numeric(data$rand2)->data$rand2
-  data <- data[order(data$rand2),]
-  
-  if (length(data$V1) > 46) {
-    print(pNumber)
-  }
-  
-  wd1 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest/", pNumber, "_Finaltest", sep="")
-  setwd(wd1)
-  infile2 <- paste(pNumber,"Finaltest.txt",sep="_")
-  currentFile <- as.data.frame(read.delim(infile2, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
-  
-  for (j in 1:nrow(currentFile)) {
-    pos <- which(tolower(as.character(data$rand2)) == tolower(as.character(currentFile$Trial_nr[j])))
-    currentFile$RT_new[j] <- data$V5[pos]
-  }
-  
-  for (j in 1:nrow(currentFile)) {
-    if(currentFile$RT_new[j]==0){
-      currentFile$RT_new[j] <- NA
-    }
-  }
-  
-  currentFile$ArticlesPost <- NA
-  if (any(posttest$Participant %in% currentFile$Subject_nr[1]) == T){
-    for (m in 1:nrow(posttest[posttest$Participant==currentFile$Subject_nr[1],])){
-      num <- which(tolower(as.character(currentFile$Trial_nr)) == tolower(as.character(posttest$Trial[m])))
-      currentFile$ArticlesPost[num] <- 1
-    }}
-  
-  setwd(wd1)
-  write.table(currentFile, infile2, quote = F, row.names = F, col.names = T, sep = "\t")
-  
-  setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
-  data <- read.delim(infile3, header = F)
-  data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
-  data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
-  as.numeric(data$rand2)->data$rand2
-  data <- data[order(data$rand2),]
-  
-  if (length(data$V1) > 46) {
-    print(pNumber)
-  }
-  
-  wd3 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Pretest/", pNumber, "_Pretest_subset", sep="")
-  setwd(wd3)
-  infile4 <- paste(pNumber,"Pretest.txt",sep="_")
-  currentFile2 <- as.data.frame(read.delim(infile4, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
-  
-  for (j in 1:nrow(data)) {
-    pos <- which(tolower(as.character(currentFile2$Trial_nr)) == tolower(as.character(data$rand2[j])))
-    currentFile2$RT_new[pos] <- data$V5[j]
-  }
-  
-  for (j in 1:nrow(currentFile2)) {
-    if(is.na(currentFile2$RT_new[j])==0 && currentFile2$RT_new[j] == 0){
-      currentFile2$RT_new[j] <- NA
-    }
-  }
-  
-  # adding a column to the pretest that codes for article trials
-  currentFile2$ArticlesPre <- NA
-  if (any(pretest$Participant %in% currentFile2$Subject_nr[1]) == T){
-    for (f in 1:nrow(pretest[pretest$Participant==currentFile2$Subject_nr[1],])){
-      num <- which(tolower(as.character(currentFile2$Trial_nr)) == tolower(as.character(pretest$Trial[f])))
-      currentFile2$ArticlesPre[num] <- 1
-    }}
-  
-  
-  setwd(wd3)
-  write.table(currentFile2, infile4, quote = F, row.names = F, col.names = T, sep = "\t")
-}
+# data_list <- list()
+# 
+# for (i in 1:length(A)){
+#   pNumber = A[i]
+#   setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING")
+#   infile1 <- paste(pNumber,"Engfinal_logfile_manual.txt",sep="_")
+#   infile3 <- paste(pNumber,"Pretest_logfile_manual.txt",sep="_")
+#   pretest <- as.data.frame(read.delim("Article_use_Pretest_txt.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+#   posttest <- as.data.frame(read.delim("Article_use_EngFinal_txt.txt", stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+# 
+#   setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest_Coding")
+#   data <- read.delim(infile1, header = F)
+#   data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
+#   data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
+#   as.numeric(data$rand2)->data$rand2
+#   data <- data[order(data$rand2),]
+# 
+#   if (length(data$V1) > 46) {
+#     print(pNumber)
+#   }
+# 
+#   wd1 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Finaltest/", pNumber, "_Finaltest", sep="")
+#   setwd(wd1)
+#   infile2 <- paste(pNumber,"Finaltest_new.txt",sep="_")
+#   currentFile <- as.data.frame(read.delim(infile2, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+# 
+#   for (j in 1:nrow(currentFile)) {
+#     pos <- which(tolower(as.character(data$rand2)) == tolower(as.character(currentFile$Trial_nr[j])))
+#     currentFile$RT_new[j] <- data$V5[pos]
+#   }
+# 
+#   for (j in 1:nrow(currentFile)) {
+#     if(currentFile$RT_new[j]==0){
+#       currentFile$RT_new[j] <- NA
+#     }
+#   }
+# 
+#   currentFile$ArticlesPost <- NA
+#   if (any(posttest$Participant %in% currentFile$Subject_nr[1]) == T){
+#     for (m in 1:nrow(posttest[posttest$Participant==currentFile$Subject_nr[1],])){
+#       num <- which(tolower(as.character(currentFile$Trial_nr)) == tolower(as.character(posttest$Trial[m])))
+#       currentFile$ArticlesPost[num] <- 1
+#     }}
+# 
+#   setwd(wd1)
+#   infile2b <- paste(pNumber,"Finaltest_new.txt",sep="_")
+#   write.table(currentFile, infile2b, quote = F, row.names = F, col.names = T, sep = "\t")
+# 
+#   setwd("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Pretest_Coding")
+#   data <- read.delim(infile3, header = F)
+#   data <- separate(data = data, col = V4, into = c("Trial", "rand"), sep = "-")
+#   data <- separate(data = data, col = Trial, into = c("Trial", "rand2"), sep = "l")
+#   as.numeric(data$rand2)->data$rand2
+#   data <- data[order(data$rand2),]
+# 
+#   if (length(data$V1) > 46) {
+#     print(pNumber)
+#   }
+# 
+#   wd3 <-  paste("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/CODING/English_Pretest/", pNumber, "_Pretest_subset", sep="")
+#   setwd(wd3)
+#   infile4 <- paste(pNumber,"Pretest_new.txt",sep="_")
+#   currentFile2 <- as.data.frame(read.delim(infile4, stringsAsFactors=FALSE, sep = "\t", header = T, skipNul = TRUE))
+# 
+#   currentFile2$RT_new <- NA
+#   for (j in 1:nrow(data)) {
+#     pos <- which(tolower(as.character(currentFile2$Trial_nr)) == tolower(as.character(data$rand2[j])))
+#     currentFile2$RT_new[pos] <- data$V5[j]
+#   }
+# 
+#   for (j in 1:nrow(currentFile2)) {
+#     if(is.na(currentFile2$RT_new[j])==0 && currentFile2$RT_new[j] == 0){
+#       currentFile2$RT_new[j] <- NA
+#     }
+#   }
+# 
+#   # adding a column to the pretest that codes for article trials
+#   currentFile2$ArticlesPre <- NA
+#   if (any(pretest$Participant %in% currentFile2$Subject_nr[1]) == T){
+#     for (f in 1:nrow(pretest[pretest$Participant==currentFile2$Subject_nr[1],])){
+#       num <- which(tolower(as.character(currentFile2$Trial_nr)) == tolower(as.character(pretest$Trial[f])))
+#       currentFile2$ArticlesPre[num] <- 1
+#     }}
+# 
+# 
+#   setwd(wd3)
+#   infile5 <- paste(pNumber,"Pretest_new.txt",sep="_")
+#   write.table(currentFile2, infile5, quote = F, row.names = F, col.names = T, sep = "\t")
+# }
 
 ### Read in all data and merge into one data file that can be read in at later stages 
 data_list <- list()
@@ -190,6 +194,10 @@ for (i in 1:nrow(post)){
   } else if (post$Subject_nr[i] == 751 || post$Subject_nr[i] == 753 || post$Subject_nr[i] == 755) {
     post$ConsolidationGroup[i] <- "Consolidation"
   } else if (post$Subject_nr[i] == 752 || post$Subject_nr[i] == 754) {
+    post$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (post$Subject_nr[i] > 755 && post$Subject_nr[i] < 770) {
+    post$ConsolidationGroup[i] <- "Consolidation"
+  } else if (post$Subject_nr[i] > 770) {
     post$ConsolidationGroup[i] <- "NoConsolidation"}
 }
 
@@ -287,13 +295,41 @@ trialscond <- as.data.frame(table(post[is.na(post$RTdiff)==0,]$Subject_nr, post[
 trialscond$Ratio <- trialscond[trialscond$Var2==1,]$Freq/trialscond[trialscond$Var2==2,]$Freq
 trialscond <- trialscond[trialscond$Var2==1,]
 
+perc2 <- perc[!(row.names(perc)== "719" | row.names(perc)== "736" | row.names(perc)== "745" | row.names(perc)== "776"),]
+perc2 <- as.data.frame(perc2)
+perc2$Var1 <- as.numeric(as.character(perc2$Var1))
+
+for (i in 1:nrow(perc2)){
+  if (perc2$Var1[i] < 726){
+    perc2$ConsolidationGroup[i] <- "Consolidation"
+  } else if (perc2$Var1[i] > 725 && perc2$Var1[i] < 751) {
+    perc2$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (perc2$Var1[i] == 751 || perc2$Var1[i] == 753 || perc2$Var1[i] == 755) {
+    perc2$ConsolidationGroup[i] <- "Consolidation"
+  } else if (perc2$Var1[i] == 752 || perc2$Var1[i] == 754) {
+    perc2$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (perc2$Var1[i] > 755 && perc2$Var1[i] < 770) {
+    perc2$ConsolidationGroup[i] <- "Consolidation"
+  } else if (perc2$Var1[i] > 770) {
+    perc2$ConsolidationGroup[i] <- "NoConsolidation"}
+}
+
+colnames(perc2) <- c("Subject_nr", "Condition", "mean", "ConsolidationGroup")
+
+ddply(perc2, .(Condition, ConsolidationGroup), 
+      summarise, N=length(mean), 
+      mean   = mean(mean, na.rm = TRUE), 
+      sd = sd(mean, na.rm = TRUE),
+      min = min(mean, na.rm = T),
+      max = max(mean, na.rm = T)) -> aggregatedDropOut
+
 # percentage of article traisl per person per condition
 article <- post[(is.na(post$ArticlesPre)==0 | is.na(post$ArticlesPost)==0),]
 article1 <- (table(article$Subject_nr, article$Condition)/23)*100
 article2 <- (table(article$Subject_nr)/46)*100
 
 # possibly exclude people that don't have enough data left 
-postrt<-post[!(post$Subject_nr== 719 | post$Subject_nr == 736 | post$Subject_nr == 745),]
+postrt<-post[!(post$Subject_nr== 719 | post$Subject_nr == 736 | post$Subject_nr == 745 | post$Subject_nr == 776),]
 postrt$Subject_nr <- droplevels(postrt$Subject_nr)
 
 ########## Plots with GGplot ###########
@@ -321,23 +357,23 @@ aggregatedError$sem <- aggregatedError$sem*100
 aggregatedError$condition_mean <- aggregatedError$condition_mean*100
 aggregatedError$condition_sem <- aggregatedError$condition_sem*100
 
-#lineplot <- ggplot(aggregatedError, aes(y = mean, x = Condition, fill = Subject_nr, group = ConsolidationGroup))
-#lineplot + geom_point(color="darkgrey") +
-#  geom_line(color="darkgrey") +
-#  geom_point(aes(y = condition_mean,
-#                 color = Condition), color="black") +
-#  geom_text(aes(label=Subject_nr)) +
-#  geom_line(aes(y = condition_mean,color="red")) +
-#  geom_errorbar(aes(ymin=condition_mean-condition_sem,
-#                    ymax=condition_mean+condition_sem,
-#                    color = "red",
-#                    na.rm = T),
-#                width = 0.5) +
-#  facet_wrap(~ConsolidationGroup) +
-#  theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
-#  scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
-#  ylab("Percentage correctly recalled words in Spanish") +
-#  theme_bw()
+lineplot <- ggplot(aggregatedError, aes(y = mean, x = Condition, fill = Subject_nr, group = ConsolidationGroup))
+lineplot + geom_point(color = "darkgrey") +
+  geom_line(color = "darkgrey") +
+  geom_point(aes(y = condition_mean,
+                 color = Condition), color="black") +
+  geom_text(aes(label=Subject_nr), show.legend = FALSE) +
+  geom_line(aes(y = condition_mean,color="red"), show.legend = FALSE) +
+  geom_errorbar(aes(ymin=condition_mean-condition_sem,
+                    ymax=condition_mean+condition_sem,
+                    color = "red",
+                    na.rm = T),
+                width = 0.5) +
+  facet_wrap(~ConsolidationGroup) +
+  theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
+  scale_x_discrete(labels=c("Interference", "No interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+  ylab("Percentage correctly recalled words in Spanish") +
+  theme_bw()
 
 barplot <- ggplot(aggregated_means_error, aes(y = condition_mean, x = Condition, fill = Condition, group = ConsolidationGroup))
 barplot + geom_bar(stat="identity", position=position_dodge()) +
@@ -347,7 +383,7 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
   coord_cartesian(ylim=c(0,6)) +
   facet_wrap(~ConsolidationGroup) +
-  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2) +
   ylab("Percentage incorrectly recalled words in English") +
   scale_fill_grey(labels=c("Interference","No Interference")) +
   theme_bw()
@@ -383,7 +419,7 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
   facet_wrap(~ConsolidationGroup) +
   coord_cartesian(ylim=c(93,100)) +
-  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2) +
   ylab("Percentage correctly recalled words in English") +
   scale_fill_grey(labels=c("Interference","No Interference")) +
   theme_bw()
@@ -429,7 +465,7 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
                 width = 0.5, position=position_dodge(0.9)) +
   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
   facet_wrap(~ConsolidationGroup) +
-  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2) + # , expand = c(0.1,0.1)
   ylab("Naming latencies in ms") +
   scale_fill_grey(labels=c("Interference","No Interference")) +
   theme_bw()
@@ -474,7 +510,8 @@ barplot + geom_bar(stat="identity", position=position_dodge()) +
                 width = 0.5, position=position_dodge(0.9)) +
   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20)) + 
   facet_wrap(~ConsolidationGroup) +
-  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2, expand = c(0.1,0.1)) +
+  coord_cartesian(ylim=c(0,800)) +
+  scale_x_discrete(labels=c("Interference", "No Interference"), breaks = 1:2) + # , expand = c(0.1,0.1)
   ylab("Speed up in naming latencies from English pre- to posttest (in ms)") +
   scale_fill_grey(labels=c("Interference","No Interference")) +
   theme_bw()
@@ -500,8 +537,8 @@ postrt$ConsolidationGroupN <- (-(as.numeric(postrt$ConsolidationGroup)-2))-0.5
 ###### Accuracy after interference #####
 
 ## Full model with maximal random effects structure
-modelfull <- glmer(Error ~ ConditionN*ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
-summary(modelfull)
+#modelfull <- glmer(Error ~ ConditionN*ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
+#summary(modelfull)
 # the model converges with the maximal justifyable random effects structure, but the random slope is perfectly correlated with the intercept for subject, so we leave the slope out
 modelfullfinal <- glmer(Error ~ ConditionN*ConsolidationGroupN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
 summary(modelfullfinal)
@@ -514,6 +551,12 @@ anova(modelfullfinal, modelconsol)
 modelinteraction <- glmer(Error ~ ConditionN*ConsolidationGroupN -ConditionN:ConsolidationGroupN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post)
 anova(modelfullfinal, modelinteraction)
 
+## seperate models for accuracy for the two groups 
+modelcon <- glmer(Error ~ ConditionN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post[post$ConsolidationGroup == "Consolidation"])
+summary(modelcon)
+modelnocon <- glmer(Error ~ ConditionN + (1|Item) + (1|Subject_nr), family = "binomial", control=glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)), data = post[post$ConsolidationGroup == "NoConsolidation"])
+summary(modelnocon)
+
 ## Simple Anova for accuracy
 # aggregate data over subjects 
 agg <- aggregate(post$Error, by = list(post$Subject_nr, post$Condition, post$ConsolidationGroup), FUN = mean, na.rm = T)
@@ -521,6 +564,14 @@ colnames(agg) <- c("Subject_nr", "Condition", "ConsolidationGroup", "Error")
 ## Arcsine transformed error rates
 anova <- aov(asin(sqrt(agg$Error)) ~ Condition*ConsolidationGroup, data = agg)
 summary(anova)
+
+# cohens D 
+library(effsize)
+cohen.d(post$Error, post$Condition, na.rm  = T)
+cohen.d(post$Error, post$ConsolidationGroup, na.rm  = T)
+cohen.d(post[post$ConsolidationGroup=="Consolidation",]$Error, post[post$ConsolidationGroup=="Consolidation",]$Condition, na.rm  = T)
+cohen.d(postrt$RTdifflog, postrt$Condition, na.rm  = T)
+
 
 ## t-tests 
 consol <- agg[agg$ConsolidationGroup=="Consolidation",]
@@ -557,6 +608,23 @@ anova(modelRT2full, modelRT2Consol)
 modelRT2Interaction <- lmer(RTdifflog ~ ConditionN*ConsolidationGroupN - ConditionN:ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = postrt)
 anova(modelRT2full, modelRT2Interaction)
 
+###### Modelling for raw RTs #####
+
+aggrt <- aggregate(postrt$RT_new_log, by = list(postrt$Subject_nr, postrt$Condition, postrt$ConsolidationGroup), FUN = mean, na.rm = T)
+colnames(aggrt) <- c("Subject_nr", "Condition", "ConsolidationGroup", "RT_new_log")
+anova_rt <- aov(RT_new_log ~ Condition*ConsolidationGroup, data = aggrt)
+summary(anova_rt)
+
+## t-tests 
+consolrt <- aggrt[aggrt$ConsolidationGroup=="Consolidation",]
+noconsolrt <- aggrt[aggrt$ConsolidationGroup=="NoConsolidation",]
+t.test(consolrt[consolrt$Condition==1,]$RT_new_log, consolrt[consolrt$Condition==2,]$RT_new_log, paired = T)
+t.test(noconsolrt[noconsolrt$Condition==1,]$RT_new_log, noconsolrt[noconsolrt$Condition==2,]$RT_new_log, paired = T)
+
+# Full model with maximum random effects structure 
+# We take the log of the reaction times because the distribution is very non-normal, and we subtract 2000ms because that's the lowest value there is currently (due to 2s delay), log transform works better if there are values close to 0 and between 0-1
+modelRT2full <- lmer(RT_new_log ~ ConditionN*ConsolidationGroupN + (1|Item) + (1+ConditionN|Subject_nr), control=lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)),data = postrt)
+summary(modelRT2full)
 
 ### Correlations with LexTale score, interference performance 
 #### LexTale ####
@@ -591,6 +659,10 @@ for (i in 1:nrow(lextalescore)){
   } else if (lextalescore$text[i] == 751 || lextalescore$text[i] == 753 || lextalescore$text[i] == 755) {
     lextalescore$ConsolidationGroup[i] <- "Consolidation"
   } else if (lextalescore$text[i] == 752 || lextalescore$text[i] == 754) {
+    lextalescore$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (lextalescore$text[i] > 755 && lextalescore$text[i] < 770) {
+    lextalescore$ConsolidationGroup[i] <- "Consolidation"
+  } else if (lextalescore$text[i] > 770) {
     lextalescore$ConsolidationGroup[i] <- "NoConsolidation"}
 }
 
@@ -631,7 +703,25 @@ exposures<-data.frame(table(adap$Item, adap$Subject_nr))
 exposures <- exposures[exposures$Freq != 0,]
 exposures$Freq <- exposures$Freq + 6
 expavg <- data.frame(tapply(exposures$Freq, exposures$Var2, mean))
+expavg$Pp <- row.names(expavg)
 
+for (i in 1:nrow(expavg)){
+  if (expavg$Pp[i] < 726){
+    expavg$ConsolidationGroup[i] <- "Consolidation"
+  } else if (expavg$Pp[i] > 725 && expavg$Pp[i] < 751) {
+    expavg$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (expavg$Pp[i] == 751 || expavg$Pp[i] == 753 || expavg$Pp[i] == 755) {
+    expavg$ConsolidationGroup[i] <- "Consolidation"
+  } else if (expavg$Pp[i] == 752 || expavg$Pp[i] == 754) {
+    expavg$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (expavg$Pp[i] > 755 && expavg$Pp[i] < 770) {
+    expavg$ConsolidationGroup[i] <- "Consolidation"
+  } else if (expavg$Pp[i] > 770) {
+    expavg$ConsolidationGroup[i] <- "NoConsolidation"}
+}
+
+tapply(expavg$tapply.exposures.Freq..exposures.Var2..mean., expavg$ConsolidationGroup, mean)
+t.test(expavg[expavg$ConsolidationGroup=="Consolidation",]$tapply.exposures.Freq..exposures.Var2..mean.,expavg[expavg$ConsolidationGroup=="NoConsolidation",]$tapply.exposures.Freq..exposures.Var2..mean.)
 
 #### Pretest performance English #####
 data_list <- list()
@@ -663,26 +753,34 @@ for (i in 1:nrow(prescores)){
   } else if (prescores$Subject_nr[i] == 751 || prescores$Subject_nr[i] == 753 || prescores$Subject_nr[i] == 755) {
     prescores$ConsolidationGroup[i] <- "Consolidation"
   } else if (prescores$Subject_nr[i] == 752 || prescores$Subject_nr[i] == 754) {
+    prescores$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (prescores$Subject_nr[i] > 755 && prescores$Subject_nr[i] < 770) {
+    prescores$ConsolidationGroup[i] <- "Consolidation"
+  } else if (prescores$Subject_nr[i] > 770) {
     prescores$ConsolidationGroup[i] <- "NoConsolidation"}
 }
 
-# check whether the groups differ in their LexTale scores 
 t.test(prescores[prescores$ConsolidationGroup=="Consolidation",]$Score, prescores[prescores$ConsolidationGroup=="NoConsolidation",]$Score)
 
 #### LBQ questionnaire ####
 LBQ <- read.delim("//cnas.ru.nl/wrkgrp/STD-EXP_5_Katya/Limesurvey_clean.txt")
 
-for (i in 1:nrow(LBQ)){
-  if (LBQ$Participant[i] < 726){
-    LBQ$ConsolidationGroup[i] <- "Consolidation"
-  } else if (LBQ$Participant[i] > 725 && LBQ$Participant[i] < 751) {
-    LBQ$ConsolidationGroup[i] <- "NoConsolidation"
-  } else if (LBQ$Participant[i] == 751 || LBQ$Participant[i] == 753 || LBQ$Participant[i] == 755) {
-    LBQ$ConsolidationGroup[i] <- "Consolidation"
-  } else if (LBQ$Participant[i] == 752 || LBQ$Participant[i] == 754) {
-    LBQ$ConsolidationGroup[i] <- "NoConsolidation"}
+for (i in 1:nrow(LBQ2)){
+  if (LBQ2$Participant[i] < 726){
+    LBQ2$ConsolidationGroup[i] <- "Consolidation"
+  } else if (LBQ2$Participant[i] > 725 && LBQ2$Participant[i] < 751) {
+    LBQ2$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (LBQ2$Participant[i] == 751 || LBQ2$Participant[i] == 753 || LBQ2$Participant[i] == 755) {
+    LBQ2$ConsolidationGroup[i] <- "Consolidation"
+  } else if (LBQ2$Participant[i] == 752 || LBQ2$Participant[i] == 754) {
+    LBQ2$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (LBQ2$Participant[i] > 755 && LBQ2$Participant[i] < 770) {
+    LBQ2$ConsolidationGroup[i] <- "Consolidation"
+  } else if (LBQ2$Participant[i] > 770) {
+    LBQ2$ConsolidationGroup[i] <- "NoConsolidation"}
 }
 
+LBQ2 <- LBQ[which(LBQ$Participant %in% A),]
 t.test(LBQ[LBQ$ConsolidationGroup=="Consolidation",]$Prof_Speaking, LBQ[LBQ$ConsolidationGroup=="NoConsolidation",]$Prof_Speaking)
 t.test(LBQ[LBQ$ConsolidationGroup=="Consolidation",]$Prof_Listening, LBQ[LBQ$ConsolidationGroup=="NoConsolidation",]$Prof_Listening)
 t.test(LBQ[LBQ$ConsolidationGroup=="Consolidation",]$Prof_Writing, LBQ[LBQ$ConsolidationGroup=="NoConsolidation",]$Prof_Writing)
@@ -696,17 +794,38 @@ t.test(LBQ[LBQ$ConsolidationGroup=="Consolidation",]$FrewWritingMin, LBQ[LBQ$Con
 t.test(LBQ[LBQ$ConsolidationGroup=="Consolidation",]$Length.of.exposure..in.years., LBQ[LBQ$ConsolidationGroup=="NoConsolidation",]$Length.of.exposure..in.years.)
 t.test(LBQ[LBQ$ConsolidationGroup=="Consolidation",]$Age.of.acquisition, LBQ[LBQ$ConsolidationGroup=="NoConsolidation",]$Age.of.acquisition)
 
+for (i in 1:nrow(LBQ)){
+  LBQ$SRP_English_avg[i] <- mean(c(LBQ$Prof_Speaking[i], LBQ$Prof_Listening[i], LBQ$Prof_Writing[i], LBQ$Prof_Reading[i]))
+}
+
+for (i in 1:nrow(LBQ)){
+  LBQ$Freq_English_avg[i] <- mean(c(LBQ$FreqSpeakMin[i], LBQ$FreqListenMin[i], LBQ$FreqReadingMin[i], LBQ$FrewWritingMin[i]))
+}
 
 ######## Forgetting score ########
 # difference between error rates in interference and no interfernce condition
 forgetting <- data.frame(tapply(post$Error, list(post$Subject_nr, post$Condition), mean, na.rm = T))
 forgetting$Difference <- forgetting$X1 - forgetting$X2
-forgetting2 <- data.frame(tapply(post$RTdiff, list(post$Subject_nr, post$Condition), mean, na.rm = T))
+forgetting2 <- data.frame(tapply(postrt$RTdiff, list(postrt$Subject_nr, postrt$Condition), mean, na.rm = T))
 forgetting2$Difference <- forgetting2$X2 - forgetting2$X1
-forgetting$ForgettingRT <- forgetting2$Difference
-forgetting$Interference_RT <- forgetting2$X1
-forgetting$NoInterference_RT <- forgetting2$X2
+forgetting$ForgettingRT <- NA
+forgetting$Interference_RT <- NA
+forgetting$NoInterference_RT <- NA
+
+for (i in 1: nrow(forgetting)){
+  num <- which(rownames(forgetting2) == rownames(forgetting)[i])
+  if (length(num) == 0){
+    forgetting$ForgettingRT[i] <- NA
+    forgetting$Interference_RT[i] <- NA
+    forgetting$NoInterference_RT[i] <- NA
+  } else {
+    forgetting$ForgettingRT[i] <- forgetting2$Difference[num]
+    forgetting$Interference_RT[i] <- forgetting2$X1[num]
+    forgetting$NoInterference_RT[i] <- forgetting2$X2[num]
+  }
+}
 colnames(forgetting) <- c("Interference_Error", "NoInterference_Error","Difference_Error", "Difference_RT", "Interference_RT","NoInterference_RT")
+forgetting$PP <- rownames(forgetting)
 
 ### Mean learning success at posttest in Spanish
 data_list <- list()
@@ -752,34 +871,108 @@ m1b <- 100-(tapply(posttestSpanishB$Error, posttestSpanishB$Subject_nr, mean)*10
 m2b <- tapply(posttestSpanishB$VoiceOnset, posttestSpanishB$Subject_nr, mean)
 
 
+m1a <- as.data.frame(m1a) 
+m1a$Participant <- row.names(m1a)
+
+for (i in 1:nrow(m1a)){
+  if (m1a$Participant[i] < 726){
+    m1a$ConsolidationGroup[i] <- "Consolidation"
+  } else if (m1a$Participant[i] > 725 && m1a$Participant[i] < 751) {
+    m1a$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (m1a$Participant[i] == 751 || m1a$Participant[i] == 753 || m1a$Participant[i] == 755) {
+    m1a$ConsolidationGroup[i] <- "Consolidation"
+  } else if (m1a$Participant[i] == 752 || m1a$Participant[i] == 754) {
+    m1a$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (m1a$Participant[i] > 755 && m1a$Participant[i] < 770) {
+    m1a$ConsolidationGroup[i] <- "Consolidation"
+  } else if (m1a$Participant[i] > 770) {
+    m1a$ConsolidationGroup[i] <- "NoConsolidation"}
+}
+
+t.test(m1a[m1a$ConsolidationGroup=="Consolidation",]$m1a, m1a[m1a$ConsolidationGroup=="NoConsolidation",]$m1a)
+
+
+m1b <- as.data.frame(m1b) 
+m1b$Participant <- row.names(m1b)
+
+for (i in 1:nrow(m1b)){
+  if (m1b$Participant[i] < 726){
+    m1b$ConsolidationGroup[i] <- "Consolidation"
+  } else if (m1b$Participant[i] > 725 && m1b$Participant[i] < 751) {
+    m1b$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (m1b$Participant[i] == 751 || m1b$Participant[i] == 753 || m1b$Participant[i] == 755) {
+    m1b$ConsolidationGroup[i] <- "Consolidation"
+  } else if (m1b$Participant[i] == 752 || m1b$Participant[i] == 754) {
+    m1b$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (m1b$Participant[i] > 755 && m1b$Participant[i] < 770) {
+    m1b$ConsolidationGroup[i] <- "Consolidation"
+  } else if (m1b$Participant[i] > 770) {
+    m1b$ConsolidationGroup[i] <- "NoConsolidation"}
+}
+
+t.test(m1b[m1b$ConsolidationGroup=="Consolidation",]$m1b, m1b[m1b$ConsolidationGroup=="NoConsolidation",]$m1b)
+
 ### Correlations #### 
-correlations <- matrix(nrow = length(A), ncol = 11)
+correlations <- matrix(nrow = length(A), ncol = 13)
 for (i in 1:length(A)) {
   pNumber = A[i]
   correlations[i,1] <- pNumber
-  correlations[i,2] <- forgetting[i,3]                                    # Forgetting score error rate
-  correlations[i,3] <- forgetting[i,4]                                    # Forgetting score RT
-  correlations[i,4] <- m1a[[i]]                                              # Learning success Spanish posttest A
-  correlations[i,5] <- m1b[[i]]                                              # Learning success Spanish posttest b
-  correlations[i,6] <- blocks[[i,1]]                                         # Number of blocks in adaptive learning
-  correlations[i,7] <- successAdap[[i]]                                    # Percent learned after second adaptive round
-  correlations[i,8] <- expavg[[i,1]]                                       # Average exposures to items (minimum 8)
-  #num <- which(tolower(as.character(rownames(pretest)))== pNumber)
-  #correlations[i,9] <- pretest[[num,1]]                                # Pretest percent known among first 101 words
-  #correlations[i,9] <- LBQ$SRmean[i]                                      # Self-ratings average Spanish  
-  #correlations[i,10] <- LBQ$SpanishExposureLengthMonth[i]                  # Spanish exposure in month
-  #correlations[i,11] <- LBQ$FreqUseTotal[i]                                # Amount of time spent with spanish per week
-  correlations[i,9] <- m2a[[i]]                                      
-  correlations[i,10] <- m2b[[i]]                                      
-  num <- which(tolower(as.character(rownames(lextalescore)))== pNumber)
-  correlations[i,11] <- lextalescore[[i,2]]                                   # Lextale score
+  #correlations[i,2] <- forgetting[i,3]                                    # Forgetting score error rate
+  #correlations[i,3] <- forgetting[i,4]                                    # Forgetting score RT
+  correlations[i,2] <- m1a[i,1]                                             # Learning success Spanish posttest A
+  correlations[i,3] <- m1b[i,1]                                              # Learning success Spanish posttest b
+  correlations[i,4] <- blocks[i,1]                                       # Number of blocks in adaptive learning
+  correlations[i,5] <- successAdap[[i]]                                    # Percent learned after second adaptive round
+  correlations[i,6] <- expavg[[i,1]]                                       # Average exposures to items (minimum 8)
+  num <- which(prescores[[i,2]]== pNumber)
+  correlations[i,7] <- prescores[[num,1]]   
+  num <- which(LBQ$Participant== pNumber)  
+  correlations[i,8] <- LBQ$Age.of.acquisition[num]                                      # Self-ratings average Spanish  
+  correlations[i,9] <- LBQ$SRP_English_avg[num]                  # Spanish exposure in month
+  correlations[i,10] <- LBQ$Freq_English_avg[num]                                # Amount of time spent with spanish per week
+  correlations[i,11] <- m2a[[i]]                                      
+  correlations[i,12] <- m2b[[i]]                                      
+  num <- which(tolower(lextalescore$text)== pNumber)
+  correlations[i,13] <- lextalescore[[num,2]]                                   # Lextale score
 }
 as.data.frame(correlations)->correlations
-colnames(correlations) <- c("Pnumber","Forgetting_Error","Forgetting_RT","MeanLearnSpaA","MeanLearnSpaB", "BlocksinAdap","AdapSuccess", "AvgExp", "MeanLearnSpaA2", "MeanLearnSpaB2", "Lextale")
+colnames(correlations) <- c("Pnumber","MeanLearnSpaA","MeanLearnSpaB", 
+                            "BlocksinAdap","AdapSuccess", "AvgExp",
+                            "PretestScore", "EnglishAoA", "SRPEnglish",
+                            "FreqEnglish",
+                            "MeanLearnSpaA2", "MeanLearnSpaB2", "Lextale")
+
+# split data into the two groups 
+for (i in 1:nrow(correlations)){
+  if (correlations$Pnumber[i] < 726){
+    correlations$ConsolidationGroup[i] <- "Consolidation"
+  } else if (correlations$Pnumber[i] > 725 && correlations$Pnumber[i] < 751) {
+    correlations$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (correlations$Pnumber[i] == 751 || correlations$Pnumber[i] == 753 || correlations$Pnumber[i] == 755) {
+    correlations$ConsolidationGroup[i] <- "Consolidation"
+  } else if (correlations$Pnumber[i] == 752 || correlations$Pnumber[i] == 754) {
+    correlations$ConsolidationGroup[i] <- "NoConsolidation"
+  } else if (correlations$Pnumber[i] > 755 && correlations$Pnumber[i] < 770) {
+    correlations$ConsolidationGroup[i] <- "Consolidation"
+  } else if (correlations$Pnumber[i] > 770) {
+    correlations$ConsolidationGroup[i] <- "NoConsolidation"}
+}
+
+write.table(correlations, "GroupMeasures_ConsolidationProject.txt", sep = "\t", quote = F, row.names = F, col.names = T)
+
+consol <- correlations[correlations$ConsolidationGroup=="Consolidation",]
+noconsol <- correlations[correlations$ConsolidationGroup=="NoConsolidation",]
 
 require(Hmisc)
+
 cormat <- as.matrix((correlations[,2:11]))
 corrtable <- rcorr(cormat)
+
+cormatcon <- as.matrix((consol[,2:11]))
+corrtablecon <- rcorr(cormatcon)
+
+cormatnocon <- as.matrix((noconsol[,2:11]))
+corrtablenocon <- rcorr(cormatnocon)
 
 #cor.test.p <- function(x){
   #FUN <- function(x, y) cor.test(x, y)[["p.value"]]
@@ -799,6 +992,24 @@ for (i in 1:10) {
     } else {
       #pvalues[i,j] = NA
       corrtable$r[i,j]=NA
+    }
+  }}
+
+for (i in 1:10) {
+  for (j in 1:10) {
+    if (is.na(corrtablecon$P[i,j])==0 && corrtablecon$P[i,j]<0.05){
+    } else {
+      #pvalues[i,j] = NA
+      corrtablecon$r[i,j]=NA
+    }
+  }}
+
+for (i in 1:10) {
+  for (j in 1:10) {
+    if (is.na(corrtablenocon$P[i,j])==0 && corrtablenocon$P[i,j]<0.05){
+    } else {
+      #pvalues[i,j] = NA
+      corrtablenocon$r[i,j]=NA
     }
   }}
 
@@ -867,4 +1078,3 @@ for (i in 1:nrow(LBQ)){
   LBQ$MeanProfEng[i] <- sum(LBQ$EnglishProficiencyListening[i], LBQ$EnglishProficiencyReading[i], LBQ$EnglishProficiencySpeaking[i], LBQ$EnglishProficiencyWriting[i])/4}
 LBQfin <- LBQ[(LBQ$Subj %in% A),]
 cor.test(pretest$`tapply(pre$Unknown, pre$Subject_nr, mean)`, LBQfin$EnglishAoA)
-

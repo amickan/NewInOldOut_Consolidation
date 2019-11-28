@@ -1,6 +1,6 @@
 ### Moving files for Experiment 3
 
-A = c(755)
+A = c(769, 784, 785, 787)
 
 ### for each participant get subset of pretest trials that need RT coding
 for (i in 1:length(A)){
